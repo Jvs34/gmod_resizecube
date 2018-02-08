@@ -78,11 +78,9 @@ function ENT:Initialize()
 		self:SetMax( mmax )
 		
 		self:SetCubeSize( Vector( 1 , 1 , 1 ) )
-		self:UpdateSize()
-	else
-		self:SetSolid( SOLID_CUSTOM )
 	end
-	
+
+	self:UpdateSize()
 	self:EnableCustomCollisions()
 end
 
@@ -114,136 +112,107 @@ function ENT:OnCubeSizeChanged( varname , oldvalue , newvalue )
 end
 
 function ENT:UpdateSize()
-	local savedproperties = nil
-	
-	local phys = self:GetPhysicsObject()
-	
-	if IsValid( phys ) then
-		savedproperties = 
-		{
-			velocity = phys:GetVelocity(),
-			ang = phys:GetAngles(),
-			pos = phys:GetPos(),
-			motion = phys:IsMotionEnabled(),
-			angvel = phys:GetAngleVelocity()
-		}
-	end
-	
-	
-	self:PhysicsInitBox( self:GetScaledMin() , self:GetScaledMax() )
-	self:SetSolid( SOLID_VPHYSICS )
-	self:SetCollisionBounds( self:GetScaledMin() , self:GetScaledMax() )
-	
-	
-	local newphys = self:GetPhysicsObject()
-	
-	if IsValid( newphys ) then
-		newphys:SetMass( newphys:GetVolume() * self.Density )
-		newphys:SetMaterial( "metal" )
+
+	if SERVER then
+		local savedproperties = nil
 		
-		if savedproperties then
-			newphys:SetPos( savedproperties.pos )
-			newphys:SetVelocity( savedproperties.velocity )
-			newphys:SetAngles( savedproperties.ang )
-			newphys:EnableMotion( savedproperties.motion )
-			newphys:AddAngleVelocity( savedproperties.angvel )
+		local phys = self:GetPhysicsObject()
+		
+		if IsValid( phys ) then
+			savedproperties = 
+			{
+				velocity = phys:GetVelocity(),
+				ang = phys:GetAngles(),
+				pos = phys:GetPos(),
+				motion = phys:IsMotionEnabled(),
+				angvel = phys:GetAngleVelocity()
+			}
 		end
 		
+		self:PhysicsInitBox( self:GetScaledMin(), self:GetScaledMax() )
+		self:SetSolid( SOLID_VPHYSICS )
+
+		local newphys = self:GetPhysicsObject()
+
+		if IsValid( newphys ) then
+			newphys:SetMass( newphys:GetVolume() * self.Density )
+			newphys:SetMaterial( "metal" )
+			
+			if savedproperties then
+				newphys:SetPos( savedproperties.pos )
+				newphys:SetVelocity( savedproperties.velocity )
+				newphys:SetAngles( savedproperties.ang )
+				newphys:EnableMotion( savedproperties.motion )
+				newphys:AddAngleVelocity( savedproperties.angvel )
+			end
+			
+		end
 	end
+
+	if CLIENT then
+		self:SetRenderBounds( self:GetScaledMin() , self:GetScaledMax())
+	end
+
+	if IsValid( self.PhysCollide ) then
+		self.PhysCollide:Destroy()
+	end
+
+	self.PhysCollide = CreatePhysCollideBox( self:GetScaledMin(), self:GetScaledMax() )
+
+	-- TODO: This happens when we're making something with 0 height/width/depth, make it not happen
+	if ( !IsValid( self.PhysCollide ) ) then print "fuck" end
+
+	self:SetCollisionBounds( self:GetScaledMin() , self:GetScaledMax() )
 end
 
 function ENT:OnTakeDamage( dmginfo )
 	self:TakePhysicsDamage( dmginfo )
 end
 
-function ENT:IntersectHullTraceWithBox( startpos , delta , extents )
-	local vecexpandedmins = self:GetScaledMin() - extents
-	local vecexpandedmaxs = self:GetScaledMax() + extents
-	
-	local hit , norm , fraction = util.IntersectRayWithOBB( startpos , delta , self:GetPos() , self:GetAngles(), vecexpandedmins , vecexpandedmaxs )
-	
-	
-	
-	
-	return hit , norm , fraction
-end
-
-
 function ENT:TestCollision( startpos , delta , isbox , extents )
-	
-	if isbox then
-		
-		--TODO
-		local bmin = extents * -1
-		local bmax = extents
-		
-		local pos = startpos + delta + Vector( 0 , 0 , bmax.z )
-		local ang = angle_zero
-		
-		
-		--[[
-		math.randomseed( startpos.z * 200 )
-
-        debugoverlay.BoxAngles( self:GetPos(), self:GetScaledMin(), self:GetScaledMax(), self:GetAngles(), 0.1, Color( 255, 0, 0, 20 ) )
-        debugoverlay.BoxAngles( startpos , -extents , extents , angle_zero , 0.1 , Color( math.random( 20, 250 ) , math.random( 20, 250 ) , math.random( 20, 250 ) , 1 ) )
-		]]
-		--debugoverlay.BoxAngles( pos , bmin , bmax , ang , 0.1 , Color( 255 , 255 , 0 , 20 ) )
-		
-		
-			
-		local hit , norm , fraction = self:IntersectHullTraceWithBox( startpos , delta , extents )
-		
-		if not hit then 
-			return 
-		end
-		
-		debugoverlay.BoxAngles( hit , bmin , bmax , angle_zero , 0.1 , Color( 255 , 255 , 0 , 20 ) )
-		
-		return 
-		{ 
-			HitPos = hit,
-			Normal 	= norm,
-			Fraction = fraction,
-		}
-		
-	else
-	
-		local hit , norm , fraction = util.IntersectRayWithOBB( startpos , delta , self:GetPos() , self:GetAngles() , self:GetScaledMin() , self:GetScaledMax() )
-		
-		if not hit then 
-			return 
-		end
-		
-		return 
-		{ 
-			HitPos = hit,
-			Normal 	= norm,
-			Fraction = fraction,
-		}
+	if ( !IsValid( self.PhysCollide ) ) then
+		return
 	end
-end
 
+	-- TODO: Investigate this under `IntersectRayWithBox`
+	local min = -extents
+	local max = extents
+	max.z = max.z - min.z
+	min.z = 0
+	
+	local hit, norm, frac = self.PhysCollide:TraceBox( self:GetPos(), self:GetAngles(), startpos, startpos + delta, min, max )
+
+	if not hit then
+		return
+	end
+
+	return 
+	{ 
+		HitPos = hit,
+		Normal  = norm,
+		Fraction = frac,
+	}
+end
 
 function ENT:Think()
-	if SERVER then
-		
-	else
-		self:SetRenderBounds( self:GetScaledMin() , self:GetScaledMax())
-	end
-	
-	self:SetCollisionBounds( self:GetScaledMin() , self:GetScaledMax() )
+	-- Things like the Gravity Gun might disable this, so keep it active.
+	self:EnableCustomCollisions()
 
+	-- TODO: Only update client when the size has actually changed
+	if CLIENT then
+		self:UpdateSize()
+	end
+
+	self:NextThink( CurTime() )
 end
 
 function ENT:OnRemove()
-
+	if IsValid( self.PhysCollide ) then
+		self.PhysCollide:Destroy()
+	end
 end
 
-
-
-if SERVER then
-
-else
+if CLIENT then
 
 	function ENT:Draw()
 		
