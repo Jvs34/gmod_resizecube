@@ -10,9 +10,19 @@ ENT.Author = "Jvs"
 ENT.Editable = true
 ENT.Spawnable = true
 
+--Min and Max of the edit menu
 ENT.MaxSize = 10
 ENT.MinSize = 0.25
-ENT.Density = 0.0002
+
+
+--ORIGINAL MASS IS 30
+--ORIGINAL VOLUME IS 4766
+ENT.Density = 0.0002 --used to calculate the weight of the physobj later on
+
+--Hard scale for the base scale
+ENT.HardMinSize = Vector( -25 , -25 , -25 )
+ENT.HardMaxSize = Vector( 25 , 25 , 25 )
+
 
 function ENT:SpawnFunction( ply , tr , ClassName )
 	
@@ -55,26 +65,16 @@ function ENT:SetupDataTables()
 				category = "Scale", 
 				}
 		} )
-	
-	self:NetworkVar( "Vector" , 0 , "Min" )
-	self:NetworkVar( "Vector" , 1 , "Max" )
-	
+
 end
 
 function ENT:Initialize()
 
 	if SERVER then
-		--ORIGINAL MASS IS 30
-		--ORIGINAL VOLUME IS 4766
 		
 		self:NetworkVarNotify( "ScaleX" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleY" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleZ" , self.OnCubeSizeChanged )
-		
-		self:SetModel( "models/xqm/boxfull.mdl" )
-		local mmin , mmax = self:GetModelBounds()
-		self:SetMin( mmin )
-		self:SetMax( mmax )
 		
 		self:SetCubeSize( Vector( 1 , 1 , 1 ) )
 	end
@@ -94,6 +94,16 @@ function ENT:SetCubeSize( vec )
 	self:SetScaleZ( vec.z )
 end
 
+--TO BE RENAMED
+
+function ENT:GetMin()
+	return self.HardMinSize
+end
+
+function ENT:GetMax()
+	return self.HardMaxSize
+end
+
 function ENT:GetCubeSize()
 	return Vector( self:GetScaleX() , self:GetScaleY() , self:GetScaleZ() )
 end
@@ -111,6 +121,9 @@ function ENT:OnCubeSizeChanged( varname , oldvalue , newvalue )
 end
 
 function ENT:UpdateSize()
+	if self:GetScaleX() == 0 or self:GetScaleY() == 0 or self:GetScaleZ() == 0 then
+		return
+	end
 
 	if SERVER then
 		local savedproperties = nil
@@ -159,7 +172,7 @@ function ENT:UpdateSize()
 	self.PhysCollide = CreatePhysCollideBox( self:GetScaledMin(), self:GetScaledMax() )
 
 	-- TODO: This happens when we're making something with 0 height/width/depth, make it not happen
-	if ( !IsValid( self.PhysCollide ) ) then print "fuck" end
+	if not IsValid( self.PhysCollide ) then print "fuck" end
 
 	self:SetCollisionBounds( self:GetScaledMin() , self:GetScaledMax() )
 end
@@ -169,7 +182,7 @@ function ENT:OnTakeDamage( dmginfo )
 end
 
 function ENT:TestCollision( startpos , delta , isbox , extents )
-	if ( !IsValid( self.PhysCollide ) ) then
+	if not IsValid( self.PhysCollide ) then
 		return
 	end
 
@@ -214,7 +227,7 @@ end
 if CLIENT then
 
 	-- This is all going away when everything looks nicer
-	local material = Material( "phoenix_storms/Metalfloor_2-3" )
+	local material = CreateMaterial( "Penis", "VertexLitGeneric", { ["$basetexture"] = "phoenix_storms/Metalfloor_2-3" } )
 	local myMesh = Mesh()
 
 	do
@@ -264,9 +277,11 @@ if CLIENT then
 		mesh.End()
 	end
 
-	function ENT:Draw()
-
+	function ENT:Draw( flags )
+		
+		render.SetBlend( 0 )
 		self:DrawModel()
+		render.SetBlend( 1 )
 
 		local mat = Matrix()
 		mat:Translate( self:GetPos() )
