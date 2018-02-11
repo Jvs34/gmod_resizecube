@@ -279,9 +279,11 @@ if CLIENT then
 
 	function ENT:Draw( flags )
 		
-		render.SetBlend( 0 )
-		self:DrawModel()
-		render.SetBlend( 1 )
+		if bit.band( flags, STUDIO_SHADOWDEPTHTEXTURE ) == 0 and halo.RenderedEntity() ~= self then
+			render.SetBlend( 0 )
+			self:DrawModel()
+			render.SetBlend( 1 )
+		end
 
 		local mat = Matrix()
 		mat:Translate( self:GetPos() )
