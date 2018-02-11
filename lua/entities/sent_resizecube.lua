@@ -71,7 +71,6 @@ function ENT:Initialize()
 		self:NetworkVarNotify( "ScaleY" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleZ" , self.OnCubeSizeChanged )
 		
-		
 		self:SetModel( "models/xqm/boxfull.mdl" )
 		local mmin , mmax = self:GetModelBounds()
 		self:SetMin( mmin )
@@ -150,7 +149,7 @@ function ENT:UpdateSize()
 	end
 
 	if CLIENT then
-		self:SetRenderBounds( self:GetScaledMin() , self:GetScaledMax())
+		self:SetRenderBounds( self:GetScaledMin() , self:GetScaledMax() )
 	end
 
 	if IsValid( self.PhysCollide ) then
@@ -214,15 +213,78 @@ end
 
 if CLIENT then
 
+	-- This is all going away when everything looks nicer
+	local material = Material( "phoenix_storms/Metalfloor_2-3" )
+	local myMesh = Mesh()
+
+	do
+		local verts = {
+			Vector(-0.5, -0.5, -0.5),
+			Vector(0.5, -0.5, -0.5),
+			Vector(-0.5, 0.5, -0.5),
+			Vector(0.5, 0.5, -0.5),
+			Vector(-0.5, -0.5, 0.5),
+			Vector(0.5, -0.5, 0.5),
+			Vector(-0.5, 0.5, 0.5),
+			Vector(0.5, 0.5, 0.5),
+		};
+
+		local indices = {
+			{ 1, 5, 7, 3 },
+			{ 6, 2, 4, 8 },
+			{ 1, 2, 6, 5 },
+			{ 3, 7, 8, 4 },
+			{ 1, 3, 4, 2 },
+			{ 5, 6, 8, 7 },
+		};
+
+		mesh.Begin( myMesh, MATERIAL_TRIANGLES, 12 )
+		for i = 1, 6 do
+			local normal = Vector( 0, 0, 0 )
+			normal[ math.floor( ( i - 1 ) / 2 ) + 1 ] = ( bit.band( i - 1, 0x1 ) > 0 ) and 1 or -1
+
+			for j = 2, 3 do
+				mesh.Position( verts[indices[i][1]] )
+				mesh.TexCoord( 0, 0, 0 )
+				mesh.Normal( normal )
+				mesh.Color( 255, 255, 255, 255 )
+				mesh.AdvanceVertex()
+				mesh.Position( verts[indices[i][j+1]] )
+				mesh.TexCoord( 0, 1, j == 2 and 1 or 0 )
+				mesh.Normal( normal )
+				mesh.Color( 255, 255, 255, 255 )
+				mesh.AdvanceVertex()
+				mesh.Position( verts[indices[i][j]] )
+				mesh.TexCoord( 0, j == 2 and 0 or 1, 1 )
+				mesh.Normal( normal )
+				mesh.Color( 255, 255, 255, 255 )
+				mesh.AdvanceVertex()
+			end
+		end
+		mesh.End()
+	end
+
 	function ENT:Draw()
-		
+
+		self:DrawModel()
+
 		local mat = Matrix()
+		mat:Translate( self:GetPos() )
+		mat:Rotate( self:GetAngles() )
+		mat:Scale( self:GetMax() - self:GetMin() )
 		mat:Scale( self:GetCubeSize() )
 		
-		
-		self:EnableMatrix( "RenderMultiply",mat)
-		self:DrawModel()
-		
+		cam.PushModelMatrix( mat )
+			render.SetMaterial( material )
+
+			myMesh:Draw()
+			--[[
+			render.PushFlashlightMode( true )
+			myMesh:Draw()
+			render.PopFlashlightMode()
+			]]
+		cam.PopModelMatrix()
+
 	end
 
 end
