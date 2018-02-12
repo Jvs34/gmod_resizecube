@@ -224,7 +224,13 @@ function ENT:OnRemove()
 	end
 end
 
-if CLIENT then
+if SERVER then
+		
+	function ENT:OnDuplicated( sourcetab )
+		self:UpdateSize()
+	end
+
+else
 
 	-- This is all going away when everything looks nicer
 	local material = CreateMaterial( "Peniasaa" .. CurTime(), "VertexLitGeneric", {
