@@ -24,7 +24,9 @@ AccessorFunc( ENT , "HardMinSize" , "MinSize" )
 AccessorFunc( ENT , "HardMaxSize" , "MaxSize" )
 
 if CLIENT then
-	AccessorFunc( ENT , "LastUpdateCheck" , "LastUpdateCheck" )
+	AccessorFunc( ENT , "LastScaleX" , "LastScaleX" )
+	AccessorFunc( ENT , "LastScaleY" , "LastScaleY" )
+	AccessorFunc( ENT , "LastScaleZ" , "LastScaleZ" )
 end
 
 function ENT:SpawnFunction( ply , tr , ClassName )
@@ -83,6 +85,10 @@ function ENT:Initialize()
 		
 		self:SetModel "models/hunter/blocks/cube025x025x025.mdl"
 		self:SetCubeSize( Vector( 1 , 1 , 1 ) )
+	else
+		self:SetLastScaleX( 0 )
+		self:SetLastScaleY( 0 )
+		self:SetLastScaleZ( 0 )
 	end
 
 	self:UpdateSize()
@@ -210,9 +216,8 @@ function ENT:Think()
 	-- Things like the Gravity Gun might disable this, so keep it active.
 	self:EnableCustomCollisions()
 
-	-- TODO: Only update client when the size has actually changed
 	if CLIENT then
-		self:UpdateSize()
+		self:CheckUpdateSize()
 	end
 
 	self:NextThink( CurTime() )
@@ -225,12 +230,36 @@ function ENT:OnRemove()
 end
 
 if SERVER then
-		
+
 	function ENT:OnDuplicated( sourcetab )
 		self:UpdateSize()
 	end
 
 else
+
+	function ENT:CheckUpdateSize()
+		local curx = self:GetScaleX()
+		local cury = self:GetScaleY()
+		local curz = self:GetScaleZ()
+		
+		local lastx = self:GetLastScaleX()
+		local lasty = self:GetLastScaleY()
+		local lastz = self:GetLastScaleZ()
+
+		if curx == 0 or cury == 0 or curz == 0 then
+			return
+		end
+
+		if curx ~= lastx or cury ~= lasty or curz ~= lastz then
+			print( "Updating the clientside collide" )
+			self:UpdateSize()
+
+			self:SetLastScaleX( curx )
+			self:SetLastScaleY( cury )
+			self:SetLastScaleZ( curz )
+			
+		end
+	end
 
 	-- This is all going away when everything looks nicer
 	local material = CreateMaterial( "Peniasaa" .. CurTime(), "VertexLitGeneric", {
