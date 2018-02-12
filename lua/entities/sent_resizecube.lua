@@ -11,18 +11,21 @@ ENT.Editable = true
 ENT.Spawnable = true
 
 --Min and Max of the edit menu
-ENT.MaxSize = 10
-ENT.MinSize = 0.25
-
+ENT.MaxEditScale = 10
+ENT.MinEditScale = 0.25
 
 --ORIGINAL MASS IS 30
 --ORIGINAL VOLUME IS 4766
 ENT.Density = 0.0002 --used to calculate the weight of the physobj later on
 
 --Hard scale for the base scale
-ENT.HardMinSize = Vector( -25 , -25 , -25 )
-ENT.HardMaxSize = Vector( 25 , 25 , 25 )
 
+AccessorFunc( ENT , "HardMinSize" , "MinSize" )
+AccessorFunc( ENT , "HardMaxSize" , "MaxSize" )
+
+if CLIENT then
+	AccessorFunc( ENT , "LastUpdateCheck" , "LastUpdateCheck" )
+end
 
 function ENT:SpawnFunction( ply , tr , ClassName )
 	
@@ -38,8 +41,8 @@ function ENT:SetupDataTables()
 			KeyName = "scalex" , 
 			Edit = { 
 				type = "Float", 
-				min = self.MinSize, 
-				max = self.MaxSize, 
+				min = self.MinEditScale, 
+				max = self.MaxEditScale, 
 				category = "Scale", 
 				order = 1 
 				}
@@ -50,8 +53,8 @@ function ENT:SetupDataTables()
 			KeyName = "scaley" , 
 			Edit = { 
 				type = "Float", 
-				min = self.MinSize, 
-				max = self.MaxSize, 
+				min = self.MinEditScale, 
+				max = self.MaxEditScale, 
 				category = "Scale", 
 				}
 		} )
@@ -60,8 +63,8 @@ function ENT:SetupDataTables()
 			KeyName = "scalez" , 
 			Edit = { 
 				type = "Float", 
-				min = self.MinSize, 
-				max = self.MaxSize, 
+				min = self.MinEditScale, 
+				max = self.MaxEditScale, 
 				category = "Scale", 
 				}
 		} )
@@ -69,7 +72,9 @@ function ENT:SetupDataTables()
 end
 
 function ENT:Initialize()
-
+	self:SetMinSize( Vector( -25 , -25 , -25 ) )
+	self:SetMaxSize( Vector( 25 , 25 , 25 ) )
+	
 	if SERVER then
 		
 		self:NetworkVarNotify( "ScaleX" , self.OnCubeSizeChanged )
@@ -86,23 +91,13 @@ end
 
 
 function ENT:SetCubeSize( vec )
-	vec.x = math.Clamp( vec.x , self.MinSize , self.MaxSize )
-	vec.y = math.Clamp( vec.y , self.MinSize , self.MaxSize )
-	vec.z = math.Clamp( vec.z , self.MinSize , self.MaxSize )
+	vec.x = math.Clamp( vec.x , self.MinEditScale , self.MaxEditScale )
+	vec.y = math.Clamp( vec.y , self.MinEditScale , self.MaxEditScale )
+	vec.z = math.Clamp( vec.z , self.MinEditScale , self.MaxEditScale )
 	
 	self:SetScaleX( vec.x )
 	self:SetScaleY( vec.y )
 	self:SetScaleZ( vec.z )
-end
-
---TO BE RENAMED
-
-function ENT:GetMin()
-	return self.HardMinSize
-end
-
-function ENT:GetMax()
-	return self.HardMaxSize
 end
 
 function ENT:GetCubeSize()
@@ -110,11 +105,11 @@ function ENT:GetCubeSize()
 end
 
 function ENT:GetScaledMin()
-	return self:GetMin() * self:GetCubeSize()
+	return self:GetMinSize() * self:GetCubeSize()
 end
 
 function ENT:GetScaledMax()
-	return self:GetMax() * self:GetCubeSize()
+	return self:GetMaxSize() * self:GetCubeSize()
 end
 
 function ENT:OnCubeSizeChanged( varname , oldvalue , newvalue )
@@ -298,7 +293,7 @@ if CLIENT then
 		local mat = Matrix()
 		mat:Translate( self:GetPos() )
 		mat:Rotate( self:GetAngles() )
-		mat:Scale( self:GetMax() - self:GetMin() )
+		mat:Scale( self:GetMaxSize() - self:GetMinSize() )
 		mat:Scale( self:GetCubeSize() )
 		
 		cam.PushModelMatrix( mat )
