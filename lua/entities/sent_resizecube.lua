@@ -76,6 +76,7 @@ function ENT:Initialize()
 		self:NetworkVarNotify( "ScaleY" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleZ" , self.OnCubeSizeChanged )
 		
+		self:SetModel "models/hunter/blocks/cube025x025x025.mdl"
 		self:SetCubeSize( Vector( 1 , 1 , 1 ) )
 	end
 
@@ -231,7 +232,12 @@ end
 if CLIENT then
 
 	-- This is all going away when everything looks nicer
-	local material = CreateMaterial( "Penis", "VertexLitGeneric", { ["$basetexture"] = "phoenix_storms/Metalfloor_2-3" } )
+	local material = CreateMaterial( "Peniasaa" .. CurTime(), "VertexLitGeneric", {
+		["$basetexture"] = "hunter/myplastic",
+		["$surfaceprop"] = "tile",
+		["$halflambert"] = "1"
+	} )
+
 	local myMesh = Mesh()
 
 	do
