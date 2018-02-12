@@ -117,14 +117,18 @@ function ENT:GetScaledMax()
 end
 
 function ENT:OnCubeSizeChanged( varname , oldvalue , newvalue )
-	self:UpdateSize()
-end
-
-function ENT:UpdateSize()
-	if self:GetScaleX() == 0 or self:GetScaleY() == 0 or self:GetScaleZ() == 0 then
+	if newvalue == 0 then
 		return
 	end
 
+	if self:GetScaleX() ~= 0 and self:GetScaleY() ~= 0 and self:GetScaleZ() ~= 0 then
+		self:UpdateSize()
+	end
+	
+end
+
+function ENT:UpdateSize()
+	
 	if SERVER then
 		local savedproperties = nil
 		
