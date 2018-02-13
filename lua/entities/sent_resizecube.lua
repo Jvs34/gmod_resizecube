@@ -13,7 +13,7 @@ ENT.Spawnable = true
 ENT.RenderGroup = RENDERGROUP_BOTH
 
 --Min and Max of the edit menu
-ENT.MaxEditScale = 200
+ENT.MaxEditScale = 64
 ENT.MinEditScale = 1
 
 --ORIGINAL MASS IS 30
@@ -87,7 +87,7 @@ function ENT:Initialize()
 		self:NetworkVarNotify( "ScaleY" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleZ" , self.OnCubeSizeChanged )
 		
-		self:SetCubeSize( Vector( 1 , 1 , 1 ) * 50 )
+		self:SetCubeSize( Vector( 1 , 1 , 1 ) * 5 )
 	else
 		self:SetLastScaleX( 0 )
 		self:SetLastScaleY( 0 )
@@ -112,7 +112,7 @@ function ENT:SetCubeSize( vec )
 end
 
 function ENT:GetCubeSize()
-	return Vector( self:GetScaleX() , self:GetScaleY() , self:GetScaleZ() )
+	return Vector( self:GetScaleX(), self:GetScaleY() , self:GetScaleZ() ) * 5
 end
 
 function ENT:GetScaledMin()
