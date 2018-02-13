@@ -312,6 +312,18 @@ else
 			{ 5, 6, 8, 7 }, -- Top
 		};
 
+		-- Todo: should not have to hardcode this so badly
+		local x, y, z = self:GetScaleX() / 4, self:GetScaleY() / 4, self:GetScaleZ() / 4
+
+		local uvs = {
+			{ { { 0, 0 }, { y, z }, { 0, z } }, { { 0, 0 }, { y, 0 }, { y, z } } },
+			{ { { 0, 0 }, { y, z }, { 0, z } }, { { 0, 0 }, { y, 0 }, { y, z } } },
+			{ { { 0, 0 }, { z, x }, { 0, x } }, { { 0, 0 }, { z, 0 }, { z, x } } },
+			{ { { 0, 0 }, { x, z }, { 0, z } }, { { 0, 0 }, { x, 0 }, { x, z } } },
+			{ { { 0, 0 }, { x, y }, { 0, y } }, { { 0, 0 }, { x, 0 }, { x, y } } },
+			{ { { 0, 0 }, { y, x }, { 0, x } }, { { 0, 0 }, { y, 0 }, { y, x } } },
+		}
+
 		local scale = self:GetScaledMax() - self:GetScaledMin()
 
 		mesh.Begin( self.Mesh, MATERIAL_TRIANGLES, 12 )
@@ -321,17 +333,17 @@ else
 
 			for j = 2, 3 do
 				mesh.Position( verts[indices[i][1]] * scale )
-				mesh.TexCoord( 0, 0, 0 )
+				mesh.TexCoord( 0, uvs[i][j-1][1][1], uvs[i][j-1][1][2] )
 				mesh.Normal( normal )
 				mesh.Color( 255, 255, 255, 255 )
 				mesh.AdvanceVertex()
 				mesh.Position( verts[indices[i][j+1]] * scale )
-				mesh.TexCoord( 0, 1, j == 2 and 1 or 0 )
+				mesh.TexCoord( 0, uvs[i][j-1][2][1], uvs[i][j-1][2][2] )
 				mesh.Normal( normal )
 				mesh.Color( 255, 255, 255, 255 )
 				mesh.AdvanceVertex()
 				mesh.Position( verts[indices[i][j]] * scale )
-				mesh.TexCoord( 0, j == 2 and 0 or 1, 1 )
+				mesh.TexCoord( 0, uvs[i][j-1][3][1], uvs[i][j-1][3][2] )
 				mesh.Normal( normal )
 				mesh.Color( 255, 255, 255, 255 )
 				mesh.AdvanceVertex()
