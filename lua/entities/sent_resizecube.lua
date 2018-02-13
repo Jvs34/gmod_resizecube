@@ -13,8 +13,8 @@ ENT.Spawnable = true
 ENT.RenderGroup = RENDERGROUP_BOTH
 
 --Min and Max of the edit menu
-ENT.MaxEditScale = 10
-ENT.MinEditScale = 0.25
+ENT.MaxEditScale = 200
+ENT.MinEditScale = 1
 
 --ORIGINAL MASS IS 30
 --ORIGINAL VOLUME IS 4766
@@ -24,11 +24,14 @@ ENT.Density = 0.0002 --used to calculate the weight of the physobj later on
 
 AccessorFunc( ENT , "HardMinSize" , "MinSize" )
 AccessorFunc( ENT , "HardMaxSize" , "MaxSize" )
+AccessorFunc( ENT , "PhysCollide" , "PhysCollide" )
 
 if CLIENT then
 	AccessorFunc( ENT , "LastScaleX" , "LastScaleX" )
 	AccessorFunc( ENT , "LastScaleY" , "LastScaleY" )
 	AccessorFunc( ENT , "LastScaleZ" , "LastScaleZ" )
+
+	AccessorFunc( ENT , "IsGizmoActive" , "IsGizmoActive" )
 end
 
 function ENT:SpawnFunction( ply , tr , ClassName )
@@ -40,11 +43,11 @@ function ENT:SpawnFunction( ply , tr , ClassName )
 end
 
 function ENT:SetupDataTables()
-	self:NetworkVar( "Float" , 0 , "ScaleX", 
+	self:NetworkVar( "Int" , 0 , "ScaleX", 
 		{ 
 			KeyName = "scalex" , 
 			Edit = { 
-				type = "Float", 
+				type = "Int", 
 				min = self.MinEditScale, 
 				max = self.MaxEditScale, 
 				category = "Scale", 
@@ -52,21 +55,21 @@ function ENT:SetupDataTables()
 				}
 		} )
 		
-	self:NetworkVar( "Float" , 1 , "ScaleY",
+	self:NetworkVar( "Int" , 1 , "ScaleY",
 		{ 
 			KeyName = "scaley" , 
 			Edit = { 
-				type = "Float", 
+				type = "Int", 
 				min = self.MinEditScale, 
 				max = self.MaxEditScale, 
 				category = "Scale", 
 				}
 		} )
-	self:NetworkVar( "Float" , 2 , "ScaleZ",
+	self:NetworkVar( "Int" , 2 , "ScaleZ",
 		{ 
 			KeyName = "scalez" , 
 			Edit = { 
-				type = "Float", 
+				type = "Int", 
 				min = self.MinEditScale, 
 				max = self.MaxEditScale, 
 				category = "Scale", 
@@ -76,20 +79,20 @@ function ENT:SetupDataTables()
 end
 
 function ENT:Initialize()
-	self:SetMinSize( Vector( -25 , -25 , -25 ) )
-	self:SetMaxSize( Vector( 25 , 25 , 25 ) )
+	self:SetMinSize( Vector( -0.5 , -0.5 , -0.5 ) )
+	self:SetMaxSize( Vector( 0.5 , 0.5 , 0.5 ) )
 	
 	if SERVER then
-		
 		self:NetworkVarNotify( "ScaleX" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleY" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleZ" , self.OnCubeSizeChanged )
 		
-		self:SetCubeSize( Vector( 1 , 1 , 1 ) )
+		self:SetCubeSize( Vector( 1 , 1 , 1 ) * 50 )
 	else
 		self:SetLastScaleX( 0 )
 		self:SetLastScaleY( 0 )
 		self:SetLastScaleZ( 0 )
+		self:SetIsGizmoActive( false )
 	end
 
 	self:AddEffects( EF_NOSHADOW )
@@ -174,14 +177,18 @@ function ENT:UpdateSize()
 		self:SetRenderBounds( self:GetScaledMin() , self:GetScaledMax() )
 	end
 
-	if IsValid( self.PhysCollide ) then
-		self.PhysCollide:Destroy()
+	if IsValid( self:GetPhysCollide() ) then
+		self:GetPhysCollide():Destroy()
 	end
 
-	self.PhysCollide = CreatePhysCollideBox( self:GetScaledMin(), self:GetScaledMax() )
+	local physcollide = CreatePhysCollideBox( self:GetScaledMin(), self:GetScaledMax() )
+	
 
-	-- TODO: This happens when we're making something with 0 height/width/depth, make it not happen
-	if not IsValid( self.PhysCollide ) then print "fuck" end
+	if not IsValid( physcollide ) then 
+		print( "Physcollide somehow not created" ) 
+	end
+
+	self:SetPhysCollide( physcollide )
 
 	self:SetCollisionBounds( self:GetScaledMin() , self:GetScaledMax() )
 end
@@ -191,7 +198,7 @@ function ENT:OnTakeDamage( dmginfo )
 end
 
 function ENT:TestCollision( startpos , delta , isbox , extents )
-	if not IsValid( self.PhysCollide ) then
+	if not IsValid( self:GetPhysCollide() ) then
 		return
 	end
 
@@ -201,7 +208,7 @@ function ENT:TestCollision( startpos , delta , isbox , extents )
 	max.z = max.z - min.z
 	min.z = 0
 	
-	local hit, norm, frac = self.PhysCollide:TraceBox( self:GetPos(), self:GetAngles(), startpos, startpos + delta, min, max )
+	local hit, norm, frac = self:GetPhysCollide():TraceBox( self:GetPos(), self:GetAngles(), startpos, startpos + delta, min, max )
 
 	if not hit then
 		return
@@ -221,18 +228,26 @@ function ENT:Think()
 
 	if CLIENT then
 		self:CheckUpdateSize()
+
+		if self:GetIsGizmoActive() then
+			self:UpdateResizeGizmo()
+		end
 	end
 
 	self:NextThink( CurTime() )
 end
 
 function ENT:OnRemove()
-	if IsValid( self.PhysCollide ) then
-		self.PhysCollide:Destroy()
+	if IsValid( self:GetPhysCollide() ) then
+		self:GetPhysCollide():Destroy()
 	end
 end
 
 if SERVER then
+	
+	function ENT:OnEntityCopyTableFinish( savetab )
+		savetab.PhysCollide = nil
+	end
 
 	function ENT:OnDuplicated( sourcetab )
 		self:UpdateSize()
@@ -327,6 +342,11 @@ else
 
 	function ENT:GetRenderMesh()
 		return { Mesh = self.Mesh, Material = material }
+	end
+
+
+	function ENT:DrawResizeGizmo()
+
 	end
 
 end
