@@ -84,7 +84,6 @@ function ENT:Initialize()
 		self:NetworkVarNotify( "ScaleY" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleZ" , self.OnCubeSizeChanged )
 		
-		self:SetModel( "models/hunter/blocks/cube025x025x025.mdl" )
 		self:SetCubeSize( Vector( 1 , 1 , 1 ) )
 	else
 		self:SetLastScaleX( 0 )
@@ -93,6 +92,7 @@ function ENT:Initialize()
 		self:SetIsGizmoActive( false )
 	end
 
+	self:AddEffects( EF_NOSHADOW )
 	self:UpdateSize()
 	self:EnableCustomCollisions()
 end
@@ -170,6 +170,7 @@ function ENT:UpdateSize()
 	end
 
 	if CLIENT then
+		self:CreateMesh()
 		self:SetRenderBounds( self:GetScaledMin() , self:GetScaledMax() )
 	end
 
@@ -267,15 +268,18 @@ else
 	end
 
 	-- This is all going away when everything looks nicer
-	local material = CreateMaterial( "Peniasaa" .. CurTime(), "VertexLitGeneric", {
-		["$basetexture"] = "hunter/myplastic",
-		["$surfaceprop"] = "tile",
-		["$halflambert"] = "1"
+	local material = CreateMaterial( "Penis" .. CurTime(), "VertexLitGeneric", {
+	["$basetexture"] =  "hunter/myplastic",
+	["$halflambert"] = 	"1",
 	} )
 
-	local myMesh = Mesh()
+	function ENT:CreateMesh()
+		if IsValid( self.Mesh ) then
+			self.Mesh:Destroy()
+		end
 
-	do
+		self.Mesh = Mesh()
+
 		local verts = {
 			Vector(-0.5, -0.5, -0.5),
 			Vector(0.5, -0.5, -0.5),
@@ -296,23 +300,25 @@ else
 			{ 5, 6, 8, 7 },
 		};
 
-		mesh.Begin( myMesh, MATERIAL_TRIANGLES, 12 )
+		local scale = self:GetScaledMax() - self:GetScaledMin()
+
+		mesh.Begin( self.Mesh, MATERIAL_TRIANGLES, 12 )
 		for i = 1, 6 do
 			local normal = Vector( 0, 0, 0 )
 			normal[ math.floor( ( i - 1 ) / 2 ) + 1 ] = ( bit.band( i - 1, 0x1 ) > 0 ) and 1 or -1
 
 			for j = 2, 3 do
-				mesh.Position( verts[indices[i][1]] )
+				mesh.Position( verts[indices[i][1]] * scale )
 				mesh.TexCoord( 0, 0, 0 )
 				mesh.Normal( normal )
 				mesh.Color( 255, 255, 255, 255 )
 				mesh.AdvanceVertex()
-				mesh.Position( verts[indices[i][j+1]] )
+				mesh.Position( verts[indices[i][j+1]] * scale )
 				mesh.TexCoord( 0, 1, j == 2 and 1 or 0 )
 				mesh.Normal( normal )
 				mesh.Color( 255, 255, 255, 255 )
 				mesh.AdvanceVertex()
-				mesh.Position( verts[indices[i][j]] )
+				mesh.Position( verts[indices[i][j]] * scale )
 				mesh.TexCoord( 0, j == 2 and 0 or 1, 1 )
 				mesh.Normal( normal )
 				mesh.Color( 255, 255, 255, 255 )
@@ -322,31 +328,8 @@ else
 		mesh.End()
 	end
 
-	function ENT:Draw( flags )
-		
-		if bit.band( flags, STUDIO_SHADOWDEPTHTEXTURE ) == 0 and halo.RenderedEntity() ~= self then
-			render.SetBlend( 0 )
-			self:DrawModel()
-			render.SetBlend( 1 )
-		end
-
-		local mat = Matrix()
-		mat:Translate( self:GetPos() )
-		mat:Rotate( self:GetAngles() )
-		mat:Scale( self:GetMaxSize() - self:GetMinSize() )
-		mat:Scale( self:GetCubeSize() )
-		
-		cam.PushModelMatrix( mat )
-			render.SetMaterial( material )
-
-			myMesh:Draw()
-			--[[
-			render.PushFlashlightMode( true )
-			myMesh:Draw()
-			render.PopFlashlightMode()
-			]]
-		cam.PopModelMatrix()
-
+	function ENT:GetRenderMesh()
+		return { Mesh = self.Mesh, Material = material }
 	end
 
 
