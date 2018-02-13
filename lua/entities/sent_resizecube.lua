@@ -22,6 +22,7 @@ ENT.Density = 0.0002 --used to calculate the weight of the physobj later on
 
 AccessorFunc( ENT , "HardMinSize" , "MinSize" )
 AccessorFunc( ENT , "HardMaxSize" , "MaxSize" )
+AccessorFunc( ENT , "PhysCollide" , "PhysCollide" )
 
 if CLIENT then
 	AccessorFunc( ENT , "LastScaleX" , "LastScaleX" )
@@ -174,13 +175,18 @@ function ENT:UpdateSize()
 		self:SetRenderBounds( self:GetScaledMin() , self:GetScaledMax() )
 	end
 
-	if IsValid( self.PhysCollide ) then
-		self.PhysCollide:Destroy()
+	if IsValid( self:GetPhysCollide() ) then
+		self:GetPhysCollide():Destroy()
 	end
 
-	self.PhysCollide = CreatePhysCollideBox( self:GetScaledMin(), self:GetScaledMax() )
+	local physcollide = CreatePhysCollideBox( self:GetScaledMin(), self:GetScaledMax() )
+	
 
-	if not IsValid( self.PhysCollide ) then print "fuck" end
+	if not IsValid( physcollide ) then 
+		print( "Physcollide somehow not created" ) 
+	end
+
+	self:SetPhysCollide( physcollide )
 
 	self:SetCollisionBounds( self:GetScaledMin() , self:GetScaledMax() )
 end
@@ -190,7 +196,7 @@ function ENT:OnTakeDamage( dmginfo )
 end
 
 function ENT:TestCollision( startpos , delta , isbox , extents )
-	if not IsValid( self.PhysCollide ) then
+	if not IsValid( self:GetPhysCollide() ) then
 		return
 	end
 
@@ -200,7 +206,7 @@ function ENT:TestCollision( startpos , delta , isbox , extents )
 	max.z = max.z - min.z
 	min.z = 0
 	
-	local hit, norm, frac = self.PhysCollide:TraceBox( self:GetPos(), self:GetAngles(), startpos, startpos + delta, min, max )
+	local hit, norm, frac = self:GetPhysCollide():TraceBox( self:GetPos(), self:GetAngles(), startpos, startpos + delta, min, max )
 
 	if not hit then
 		return
@@ -230,12 +236,16 @@ function ENT:Think()
 end
 
 function ENT:OnRemove()
-	if IsValid( self.PhysCollide ) then
-		self.PhysCollide:Destroy()
+	if IsValid( self:GetPhysCollide() ) then
+		self:GetPhysCollide():Destroy()
 	end
 end
 
 if SERVER then
+	
+	function ENT:OnEntityCopyTableFinish( savetab )
+		savetab.PhysCollide = nil
+	end
 
 	function ENT:OnDuplicated( sourcetab )
 		self:UpdateSize()
