@@ -21,6 +21,21 @@ ENT.MinEditScale = 1
 ENT.Density = 0.0002 --used to calculate the weight of the physobj later on
 
 --Hard scale for the base scale
+ENT.ScaleMultipliers = {
+	{
+		title = "Default (10 to 1)",
+		scale = 5
+	},
+	{
+		title = "PHX",
+		scale = 11.878124237060546875
+	},
+	{
+		title = "Hammer Units (1 to 1)",
+		scale = 1
+	}
+}
+
 
 AccessorFunc( ENT , "HardMinSize" , "MinSize" )
 AccessorFunc( ENT , "HardMaxSize" , "MaxSize" )
@@ -30,6 +45,7 @@ if CLIENT then
 	AccessorFunc( ENT , "LastScaleX" , "LastScaleX" )
 	AccessorFunc( ENT , "LastScaleY" , "LastScaleY" )
 	AccessorFunc( ENT , "LastScaleZ" , "LastScaleZ" )
+	AccessorFunc( ENT , "LastScaleMultiplier" , "LastScaleMultiplier" )
 
 	AccessorFunc( ENT , "IsGizmoActive" , "IsGizmoActive" )
 end
@@ -45,37 +61,53 @@ end
 function ENT:SetupDataTables()
 	self:NetworkVar( "Int" , 0 , "ScaleX", 
 		{ 
-			KeyName = "scalex" , 
+			KeyName = "scalex", 
 			Edit = { 
 				type = "Int", 
 				min = self.MinEditScale, 
 				max = self.MaxEditScale, 
 				category = "Scale", 
 				order = 1 
-				}
-		} )
+			}
+	} )
 		
 	self:NetworkVar( "Int" , 1 , "ScaleY",
 		{ 
-			KeyName = "scaley" , 
+			KeyName = "scaley", 
 			Edit = { 
 				type = "Int", 
 				min = self.MinEditScale, 
 				max = self.MaxEditScale, 
 				category = "Scale", 
-				}
-		} )
+			}
+	} )
 	self:NetworkVar( "Int" , 2 , "ScaleZ",
 		{ 
-			KeyName = "scalez" , 
+			KeyName = "scalez", 
 			Edit = { 
 				type = "Int", 
 				min = self.MinEditScale, 
 				max = self.MaxEditScale, 
 				category = "Scale", 
-				}
-		} )
+			}
+	} )
+	
+	local datatab = {}
 
+	for i , v in pairs( self.ScaleMultipliers ) do
+		datatab[v.title] = i
+	end
+
+	self:NetworkVar( "Int", 3 , "ScaleMultiplier",
+		{
+			KeyName = "scalemultiplier", 
+			Edit = {
+				title = "Coordinate System",
+				type = "Combo",
+				category = "Scale",
+				values = datatab
+			}
+	} )
 end
 
 function ENT:Initialize()
@@ -86,12 +118,15 @@ function ENT:Initialize()
 		self:NetworkVarNotify( "ScaleX" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleY" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleZ" , self.OnCubeSizeChanged )
-		
-		self:SetCubeSize( Vector( 1 , 1 , 1 ) * 5 )
+		self:NetworkVarNotify( "ScaleMultiplier" , self.OnCubeSizeChanged )
+
+		self:SetScaleMultiplier( 1 ) --use the first one by default
+		self:SetCubeSize( Vector( 1 , 1 , 1 ) * self:GetScaleMultiplierValue() )
 	else
 		self:SetLastScaleX( 0 )
 		self:SetLastScaleY( 0 )
 		self:SetLastScaleZ( 0 )
+		self:SetLastScaleMultiplier( 0 )
 		self:SetIsGizmoActive( false )
 	end
 
@@ -100,6 +135,15 @@ function ENT:Initialize()
 	self:EnableCustomCollisions()
 end
 
+function ENT:GetScaleMultiplierValue()
+	local indx = self:GetScaleMultiplier()
+	
+	if self.ScaleMultipliers[indx] then
+		return self.ScaleMultipliers[indx].scale
+	end
+
+	return 5
+end
 
 function ENT:SetCubeSize( vec )
 	vec.x = math.Clamp( vec.x , self.MinEditScale , self.MaxEditScale )
@@ -112,7 +156,7 @@ function ENT:SetCubeSize( vec )
 end
 
 function ENT:GetCubeSize()
-	return Vector( self:GetScaleX(), self:GetScaleY() , self:GetScaleZ() ) * 5
+	return Vector( self:GetScaleX(), self:GetScaleY() , self:GetScaleZ() ) * self:GetScaleMultiplierValue()
 end
 
 function ENT:GetScaledMin()
@@ -131,7 +175,6 @@ function ENT:OnCubeSizeChanged( varname , oldvalue , newvalue )
 	if self:GetScaleX() ~= 0 and self:GetScaleY() ~= 0 and self:GetScaleZ() ~= 0 then
 		self:UpdateSize()
 	end
-	
 end
 
 function ENT:UpdateSize()
@@ -259,23 +302,24 @@ else
 		local curx = self:GetScaleX()
 		local cury = self:GetScaleY()
 		local curz = self:GetScaleZ()
-		
+		local curmult = self:GetScaleMultiplier()
+
 		local lastx = self:GetLastScaleX()
 		local lasty = self:GetLastScaleY()
 		local lastz = self:GetLastScaleZ()
+		local lastmult = self:GetLastScaleMultiplier()
 
 		if curx == 0 or cury == 0 or curz == 0 then
 			return
 		end
 
-		if curx ~= lastx or cury ~= lasty or curz ~= lastz then
-			print( "Updating the clientside collide" )
+		if curx ~= lastx or cury ~= lasty or curz ~= lastz or curmult ~= lastmult then
 			self:UpdateSize()
 
 			self:SetLastScaleX( curx )
 			self:SetLastScaleY( cury )
 			self:SetLastScaleZ( curz )
-			
+			self:SetLastScaleMultiplier( curmult )
 		end
 	end
 
