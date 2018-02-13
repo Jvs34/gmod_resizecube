@@ -27,6 +27,8 @@ if CLIENT then
 	AccessorFunc( ENT , "LastScaleX" , "LastScaleX" )
 	AccessorFunc( ENT , "LastScaleY" , "LastScaleY" )
 	AccessorFunc( ENT , "LastScaleZ" , "LastScaleZ" )
+
+	AccessorFunc( ENT , "IsGizmoActive" , "IsGizmoActive" )
 end
 
 function ENT:SpawnFunction( ply , tr , ClassName )
@@ -78,17 +80,17 @@ function ENT:Initialize()
 	self:SetMaxSize( Vector( 25 , 25 , 25 ) )
 	
 	if SERVER then
-		
 		self:NetworkVarNotify( "ScaleX" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleY" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleZ" , self.OnCubeSizeChanged )
 		
-		self:SetModel "models/hunter/blocks/cube025x025x025.mdl"
+		self:SetModel( "models/hunter/blocks/cube025x025x025.mdl" )
 		self:SetCubeSize( Vector( 1 , 1 , 1 ) )
 	else
 		self:SetLastScaleX( 0 )
 		self:SetLastScaleY( 0 )
 		self:SetLastScaleZ( 0 )
+		self:SetIsGizmoActive( false )
 	end
 
 	self:UpdateSize()
@@ -177,7 +179,6 @@ function ENT:UpdateSize()
 
 	self.PhysCollide = CreatePhysCollideBox( self:GetScaledMin(), self:GetScaledMax() )
 
-	-- TODO: This happens when we're making something with 0 height/width/depth, make it not happen
 	if not IsValid( self.PhysCollide ) then print "fuck" end
 
 	self:SetCollisionBounds( self:GetScaledMin() , self:GetScaledMax() )
@@ -218,6 +219,10 @@ function ENT:Think()
 
 	if CLIENT then
 		self:CheckUpdateSize()
+
+		if self:GetIsGizmoActive() then
+			self:UpdateResizeGizmo()
+		end
 	end
 
 	self:NextThink( CurTime() )
@@ -341,6 +346,11 @@ else
 			render.PopFlashlightMode()
 			]]
 		cam.PopModelMatrix()
+
+	end
+
+
+	function ENT:DrawResizeGizmo()
 
 	end
 
