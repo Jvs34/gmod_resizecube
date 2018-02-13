@@ -11,8 +11,8 @@ ENT.Editable = true
 ENT.Spawnable = true
 
 --Min and Max of the edit menu
-ENT.MaxEditScale = 10
-ENT.MinEditScale = 0.25
+ENT.MaxEditScale = 200
+ENT.MinEditScale = 1
 
 --ORIGINAL MASS IS 30
 --ORIGINAL VOLUME IS 4766
@@ -41,11 +41,11 @@ function ENT:SpawnFunction( ply , tr , ClassName )
 end
 
 function ENT:SetupDataTables()
-	self:NetworkVar( "Float" , 0 , "ScaleX", 
+	self:NetworkVar( "Int" , 0 , "ScaleX", 
 		{ 
 			KeyName = "scalex" , 
 			Edit = { 
-				type = "Float", 
+				type = "Int", 
 				min = self.MinEditScale, 
 				max = self.MaxEditScale, 
 				category = "Scale", 
@@ -53,21 +53,21 @@ function ENT:SetupDataTables()
 				}
 		} )
 		
-	self:NetworkVar( "Float" , 1 , "ScaleY",
+	self:NetworkVar( "Int" , 1 , "ScaleY",
 		{ 
 			KeyName = "scaley" , 
 			Edit = { 
-				type = "Float", 
+				type = "Int", 
 				min = self.MinEditScale, 
 				max = self.MaxEditScale, 
 				category = "Scale", 
 				}
 		} )
-	self:NetworkVar( "Float" , 2 , "ScaleZ",
+	self:NetworkVar( "Int" , 2 , "ScaleZ",
 		{ 
 			KeyName = "scalez" , 
 			Edit = { 
-				type = "Float", 
+				type = "Int", 
 				min = self.MinEditScale, 
 				max = self.MaxEditScale, 
 				category = "Scale", 
@@ -77,15 +77,15 @@ function ENT:SetupDataTables()
 end
 
 function ENT:Initialize()
-	self:SetMinSize( Vector( -25 , -25 , -25 ) )
-	self:SetMaxSize( Vector( 25 , 25 , 25 ) )
+	self:SetMinSize( Vector( -0.5 , -0.5 , -0.5 ) )
+	self:SetMaxSize( Vector( 0.5 , 0.5 , 0.5 ) )
 	
 	if SERVER then
 		self:NetworkVarNotify( "ScaleX" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleY" , self.OnCubeSizeChanged )
 		self:NetworkVarNotify( "ScaleZ" , self.OnCubeSizeChanged )
 		
-		self:SetCubeSize( Vector( 1 , 1 , 1 ) )
+		self:SetCubeSize( Vector( 1 , 1 , 1 ) * 50 )
 	else
 		self:SetLastScaleX( 0 )
 		self:SetLastScaleY( 0 )
