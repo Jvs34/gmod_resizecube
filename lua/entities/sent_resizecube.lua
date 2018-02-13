@@ -10,6 +10,8 @@ ENT.Author = "Jvs"
 ENT.Editable = true
 ENT.Spawnable = true
 
+ENT.RenderGroup = RENDERGROUP_BOTH
+
 --Min and Max of the edit menu
 ENT.MaxEditScale = 10
 ENT.MinEditScale = 0.25
@@ -276,23 +278,23 @@ else
 		self.Mesh = Mesh()
 
 		local verts = {
-			Vector(-0.5, -0.5, -0.5),
-			Vector(0.5, -0.5, -0.5),
-			Vector(-0.5, 0.5, -0.5),
-			Vector(0.5, 0.5, -0.5),
-			Vector(-0.5, -0.5, 0.5),
-			Vector(0.5, -0.5, 0.5),
-			Vector(-0.5, 0.5, 0.5),
-			Vector(0.5, 0.5, 0.5),
+			Vector( -0.5, -0.5, -0.5 ),
+			Vector(  0.5, -0.5, -0.5 ),
+			Vector( -0.5,  0.5, -0.5 ),
+			Vector(  0.5,  0.5, -0.5 ),
+			Vector( -0.5, -0.5,  0.5 ),
+			Vector(  0.5, -0.5,  0.5 ),
+			Vector( -0.5,  0.5,  0.5 ),
+			Vector(  0.5,  0.5,  0.5 ),
 		};
 
 		local indices = {
-			{ 1, 5, 7, 3 },
-			{ 6, 2, 4, 8 },
-			{ 1, 2, 6, 5 },
-			{ 3, 7, 8, 4 },
-			{ 1, 3, 4, 2 },
-			{ 5, 6, 8, 7 },
+			{ 1, 5, 7, 3 }, -- Front
+			{ 6, 2, 4, 8 }, -- Back
+			{ 1, 2, 6, 5 }, -- Right
+			{ 3, 7, 8, 4 }, -- Left
+			{ 1, 3, 4, 2 }, -- Bottom
+			{ 5, 6, 8, 7 }, -- Top
 		};
 
 		local scale = self:GetScaledMax() - self:GetScaledMin()
