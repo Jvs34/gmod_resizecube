@@ -11,18 +11,23 @@ ENT.Editable = true
 ENT.Spawnable = true
 
 --Min and Max of the edit menu
-ENT.MaxSize = 10
-ENT.MinSize = 0.25
-
+ENT.MaxEditScale = 10
+ENT.MinEditScale = 0.25
 
 --ORIGINAL MASS IS 30
 --ORIGINAL VOLUME IS 4766
 ENT.Density = 0.0002 --used to calculate the weight of the physobj later on
 
 --Hard scale for the base scale
-ENT.HardMinSize = Vector( -25 , -25 , -25 )
-ENT.HardMaxSize = Vector( 25 , 25 , 25 )
 
+AccessorFunc( ENT , "HardMinSize" , "MinSize" )
+AccessorFunc( ENT , "HardMaxSize" , "MaxSize" )
+
+if CLIENT then
+	AccessorFunc( ENT , "LastScaleX" , "LastScaleX" )
+	AccessorFunc( ENT , "LastScaleY" , "LastScaleY" )
+	AccessorFunc( ENT , "LastScaleZ" , "LastScaleZ" )
+end
 
 function ENT:SpawnFunction( ply , tr , ClassName )
 	
@@ -38,8 +43,8 @@ function ENT:SetupDataTables()
 			KeyName = "scalex" , 
 			Edit = { 
 				type = "Float", 
-				min = self.MinSize, 
-				max = self.MaxSize, 
+				min = self.MinEditScale, 
+				max = self.MaxEditScale, 
 				category = "Scale", 
 				order = 1 
 				}
@@ -50,8 +55,8 @@ function ENT:SetupDataTables()
 			KeyName = "scaley" , 
 			Edit = { 
 				type = "Float", 
-				min = self.MinSize, 
-				max = self.MaxSize, 
+				min = self.MinEditScale, 
+				max = self.MaxEditScale, 
 				category = "Scale", 
 				}
 		} )
@@ -60,8 +65,8 @@ function ENT:SetupDataTables()
 			KeyName = "scalez" , 
 			Edit = { 
 				type = "Float", 
-				min = self.MinSize, 
-				max = self.MaxSize, 
+				min = self.MinEditScale, 
+				max = self.MaxEditScale, 
 				category = "Scale", 
 				}
 		} )
@@ -69,7 +74,9 @@ function ENT:SetupDataTables()
 end
 
 function ENT:Initialize()
-
+	self:SetMinSize( Vector( -25 , -25 , -25 ) )
+	self:SetMaxSize( Vector( 25 , 25 , 25 ) )
+	
 	if SERVER then
 		
 		self:NetworkVarNotify( "ScaleX" , self.OnCubeSizeChanged )
@@ -77,6 +84,10 @@ function ENT:Initialize()
 		self:NetworkVarNotify( "ScaleZ" , self.OnCubeSizeChanged )
 		
 		self:SetCubeSize( Vector( 1 , 1 , 1 ) )
+	else
+		self:SetLastScaleX( 0 )
+		self:SetLastScaleY( 0 )
+		self:SetLastScaleZ( 0 )
 	end
 
 	self:AddEffects( EF_NOSHADOW )
@@ -86,23 +97,13 @@ end
 
 
 function ENT:SetCubeSize( vec )
-	vec.x = math.Clamp( vec.x , self.MinSize , self.MaxSize )
-	vec.y = math.Clamp( vec.y , self.MinSize , self.MaxSize )
-	vec.z = math.Clamp( vec.z , self.MinSize , self.MaxSize )
+	vec.x = math.Clamp( vec.x , self.MinEditScale , self.MaxEditScale )
+	vec.y = math.Clamp( vec.y , self.MinEditScale , self.MaxEditScale )
+	vec.z = math.Clamp( vec.z , self.MinEditScale , self.MaxEditScale )
 	
 	self:SetScaleX( vec.x )
 	self:SetScaleY( vec.y )
 	self:SetScaleZ( vec.z )
-end
-
---TO BE RENAMED
-
-function ENT:GetMin()
-	return self.HardMinSize
-end
-
-function ENT:GetMax()
-	return self.HardMaxSize
 end
 
 function ENT:GetCubeSize()
@@ -110,22 +111,26 @@ function ENT:GetCubeSize()
 end
 
 function ENT:GetScaledMin()
-	return self:GetMin() * self:GetCubeSize()
+	return self:GetMinSize() * self:GetCubeSize()
 end
 
 function ENT:GetScaledMax()
-	return self:GetMax() * self:GetCubeSize()
+	return self:GetMaxSize() * self:GetCubeSize()
 end
 
 function ENT:OnCubeSizeChanged( varname , oldvalue , newvalue )
-	self:UpdateSize()
-end
-
-function ENT:UpdateSize()
-	if self:GetScaleX() == 0 or self:GetScaleY() == 0 or self:GetScaleZ() == 0 then
+	if newvalue == 0 then
 		return
 	end
 
+	if self:GetScaleX() ~= 0 and self:GetScaleY() ~= 0 and self:GetScaleZ() ~= 0 then
+		self:UpdateSize()
+	end
+	
+end
+
+function ENT:UpdateSize()
+	
 	if SERVER then
 		local savedproperties = nil
 		
@@ -212,9 +217,8 @@ function ENT:Think()
 	-- Things like the Gravity Gun might disable this, so keep it active.
 	self:EnableCustomCollisions()
 
-	-- TODO: Only update client when the size has actually changed
 	if CLIENT then
-		self:UpdateSize()
+		self:CheckUpdateSize()
 	end
 
 	self:NextThink( CurTime() )
@@ -226,7 +230,37 @@ function ENT:OnRemove()
 	end
 end
 
-if CLIENT then
+if SERVER then
+
+	function ENT:OnDuplicated( sourcetab )
+		self:UpdateSize()
+	end
+
+else
+
+	function ENT:CheckUpdateSize()
+		local curx = self:GetScaleX()
+		local cury = self:GetScaleY()
+		local curz = self:GetScaleZ()
+		
+		local lastx = self:GetLastScaleX()
+		local lasty = self:GetLastScaleY()
+		local lastz = self:GetLastScaleZ()
+
+		if curx == 0 or cury == 0 or curz == 0 then
+			return
+		end
+
+		if curx ~= lastx or cury ~= lasty or curz ~= lastz then
+			print( "Updating the clientside collide" )
+			self:UpdateSize()
+
+			self:SetLastScaleX( curx )
+			self:SetLastScaleY( cury )
+			self:SetLastScaleZ( curz )
+			
+		end
+	end
 
 	-- This is all going away when everything looks nicer
 	local material = CreateMaterial( "Penis" .. CurTime(), "VertexLitGeneric", {
