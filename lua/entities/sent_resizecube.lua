@@ -24,7 +24,7 @@ ENT.Density = 0.0002 --used to calculate the weight of the physobj later on
 ENT.ScaleMultipliers = {
 	{
 		title = "Default (10 to 1)",
-		scale = 5
+		scale = 10
 	},
 	{
 		title = "PHX",
