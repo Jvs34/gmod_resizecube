@@ -323,11 +323,7 @@ else
 		end
 	end
 
-	-- This is all going away when everything looks nicer
-	local material = CreateMaterial( "Penis" .. CurTime(), "VertexLitGeneric", {
-	["$basetexture"] =  "hunter/myplastic",
-	["$halflambert"] = 	"1",
-	} )
+	local material = Material( "hunter/myplastic" )
 
 	function ENT:CreateMesh()
 		if IsValid( self.Mesh ) then
@@ -368,6 +364,15 @@ else
 			{ { { 0, 0 }, { y, x }, { 0, x } }, { { 0, 0 }, { y, 0 }, { y, x } } },
 		}
 
+		local tangents = {
+			{ 0, 1, 0, -1 }, -- Front
+			{ 0, 1, 0, -1 }, -- Back
+			{ 0, 0, 1, -1 }, -- Right
+			{ 1, 0, 0, -1 }, -- Left
+			{ 1, 0, 0, -1 }, -- Bottom
+			{ 0, 1, 0, -1 }, -- Top
+		}
+
 		local scale = self:GetScaledMax() - self:GetScaledMin()
 
 		mesh.Begin( self.Mesh, MATERIAL_TRIANGLES, 12 )
@@ -379,16 +384,19 @@ else
 				mesh.Position( verts[indices[i][1]] * scale )
 				mesh.TexCoord( 0, uvs[i][j-1][1][1], uvs[i][j-1][1][2] )
 				mesh.Normal( normal )
+				mesh.UserData( tangents[i][1], tangents[i][2], tangents[i][3], tangents[i][4] )
 				mesh.Color( 255, 255, 255, 255 )
 				mesh.AdvanceVertex()
 				mesh.Position( verts[indices[i][j+1]] * scale )
 				mesh.TexCoord( 0, uvs[i][j-1][2][1], uvs[i][j-1][2][2] )
 				mesh.Normal( normal )
+				mesh.UserData( tangents[i][1], tangents[i][2], tangents[i][3], tangents[i][4] )
 				mesh.Color( 255, 255, 255, 255 )
 				mesh.AdvanceVertex()
 				mesh.Position( verts[indices[i][j]] * scale )
 				mesh.TexCoord( 0, uvs[i][j-1][3][1], uvs[i][j-1][3][2] )
 				mesh.Normal( normal )
+				mesh.UserData( tangents[i][1], tangents[i][2], tangents[i][3], tangents[i][4] )
 				mesh.Color( 255, 255, 255, 255 )
 				mesh.AdvanceVertex()
 			end
@@ -399,7 +407,6 @@ else
 	function ENT:GetRenderMesh()
 		return { Mesh = self.Mesh, Material = material }
 	end
-
 
 	function ENT:DrawResizeGizmo()
 
