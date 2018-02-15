@@ -323,6 +323,11 @@ else
 		end
 	end
 
+	function ENT:ImpactTrace( trace , dmgtype , customimpactname )
+		--check if the trace hit the metal or the plastic part
+		return true
+	end
+
 	local material = Material( "hunter/myplastic" )
 
 	function ENT:CreateMesh()
