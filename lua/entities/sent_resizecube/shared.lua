@@ -1,8 +1,12 @@
 
 AddCSLuaFile()
+AddCSLuaFile( "mesh.lua" )
+
+if CLIENT then
+	include( "mesh.lua" )
+end
 
 DEFINE_BASECLASS( "base_anim" )
-
 
 ENT.PrintName = "Resizable Cube"
 ENT.Author = "Jvs"
@@ -35,6 +39,8 @@ ENT.ScaleMultipliers = {
 		scale = 1
 	}
 }
+
+
 
 
 AccessorFunc( ENT , "HardMinSize" , "MinSize" )
@@ -328,90 +334,6 @@ else
 		return true
 	end
 
-	local material = Material( "hunter/myplastic" )
-
-	function ENT:CreateMesh()
-		if IsValid( self.Mesh ) then
-			self.Mesh:Destroy()
-		end
-
-		self.Mesh = Mesh()
-
-		local verts = {
-			Vector( -0.5, -0.5, -0.5 ),
-			Vector(  0.5, -0.5, -0.5 ),
-			Vector( -0.5,  0.5, -0.5 ),
-			Vector(  0.5,  0.5, -0.5 ),
-			Vector( -0.5, -0.5,  0.5 ),
-			Vector(  0.5, -0.5,  0.5 ),
-			Vector( -0.5,  0.5,  0.5 ),
-			Vector(  0.5,  0.5,  0.5 ),
-		};
-
-		local indices = {
-			{ 1, 5, 7, 3 }, -- Front
-			{ 6, 2, 4, 8 }, -- Back
-			{ 1, 2, 6, 5 }, -- Right
-			{ 3, 7, 8, 4 }, -- Left
-			{ 1, 3, 4, 2 }, -- Bottom
-			{ 5, 6, 8, 7 }, -- Top
-		};
-
-		-- Todo: should not have to hardcode this so badly
-		local x, y, z = self:GetScaleX() / 4, self:GetScaleY() / 4, self:GetScaleZ() / 4
-
-		local uvs = {
-			{ { { 0, 0 }, { y, z }, { 0, z } }, { { 0, 0 }, { y, 0 }, { y, z } } },
-			{ { { 0, 0 }, { y, z }, { 0, z } }, { { 0, 0 }, { y, 0 }, { y, z } } },
-			{ { { 0, 0 }, { z, x }, { 0, x } }, { { 0, 0 }, { z, 0 }, { z, x } } },
-			{ { { 0, 0 }, { x, z }, { 0, z } }, { { 0, 0 }, { x, 0 }, { x, z } } },
-			{ { { 0, 0 }, { x, y }, { 0, y } }, { { 0, 0 }, { x, 0 }, { x, y } } },
-			{ { { 0, 0 }, { y, x }, { 0, x } }, { { 0, 0 }, { y, 0 }, { y, x } } },
-		}
-
-		local tangents = {
-			{ 0, 1, 0, -1 }, -- Front
-			{ 0, 1, 0, -1 }, -- Back
-			{ 0, 0, 1, -1 }, -- Right
-			{ 1, 0, 0, -1 }, -- Left
-			{ 1, 0, 0, -1 }, -- Bottom
-			{ 0, 1, 0, -1 }, -- Top
-		}
-
-		local scale = self:GetScaledMax() - self:GetScaledMin()
-
-		mesh.Begin( self.Mesh, MATERIAL_TRIANGLES, 12 )
-		for i = 1, 6 do
-			local normal = Vector( 0, 0, 0 )
-			normal[ math.floor( ( i - 1 ) / 2 ) + 1 ] = ( bit.band( i - 1, 0x1 ) > 0 ) and 1 or -1
-
-			for j = 2, 3 do
-				mesh.Position( verts[indices[i][1]] * scale )
-				mesh.TexCoord( 0, uvs[i][j-1][1][1], uvs[i][j-1][1][2] )
-				mesh.Normal( normal )
-				mesh.UserData( tangents[i][1], tangents[i][2], tangents[i][3], tangents[i][4] )
-				mesh.Color( 255, 255, 255, 255 )
-				mesh.AdvanceVertex()
-				mesh.Position( verts[indices[i][j+1]] * scale )
-				mesh.TexCoord( 0, uvs[i][j-1][2][1], uvs[i][j-1][2][2] )
-				mesh.Normal( normal )
-				mesh.UserData( tangents[i][1], tangents[i][2], tangents[i][3], tangents[i][4] )
-				mesh.Color( 255, 255, 255, 255 )
-				mesh.AdvanceVertex()
-				mesh.Position( verts[indices[i][j]] * scale )
-				mesh.TexCoord( 0, uvs[i][j-1][3][1], uvs[i][j-1][3][2] )
-				mesh.Normal( normal )
-				mesh.UserData( tangents[i][1], tangents[i][2], tangents[i][3], tangents[i][4] )
-				mesh.Color( 255, 255, 255, 255 )
-				mesh.AdvanceVertex()
-			end
-		end
-		mesh.End()
-	end
-
-	function ENT:GetRenderMesh()
-		return { Mesh = self.Mesh, Material = material }
-	end
 
 	function ENT:DrawResizeGizmo()
 
