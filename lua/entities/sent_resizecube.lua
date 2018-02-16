@@ -10,7 +10,7 @@ ENT.Author = "Jvs"
 ENT.Editable = true
 ENT.Spawnable = true
 
-ENT.RenderGroup = RENDERGROUP_BOTH
+ENT.RenderGroup = RENDERGROUP_OPAQUE
 
 --Min and Max of the edit menu
 ENT.MaxEditScale = 64
@@ -23,15 +23,15 @@ ENT.Density = 0.0002 --used to calculate the weight of the physobj later on
 --Hard scale for the base scale
 ENT.ScaleMultipliers = {
 	{
-		title = "Default (10 to 1)",
-		scale = 10
+		title = "Default (6:1)",
+		scale = 6
 	},
 	{
 		title = "PHX",
 		scale = 11.878124237060546875
 	},
 	{
-		title = "Hammer Units (1 to 1)",
+		title = "Hammer Units (1:1)",
 		scale = 1
 	}
 }
