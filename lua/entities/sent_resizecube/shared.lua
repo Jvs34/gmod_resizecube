@@ -97,6 +97,8 @@ function ENT:SetupDataTables()
 				category = "Scale", 
 			}
 	} )
+
+	self:NetworkVar( "Entity" , 0 , "Widget" )
 	
 	local datatab = {}
 
@@ -278,9 +280,6 @@ function ENT:Think()
 	if CLIENT then
 		self:CheckUpdateSize()
 
-		if self:GetIsGizmoActive() then
-			self:UpdateResizeGizmo()
-		end
 	end
 
 	self:NextThink( CurTime() )
@@ -332,11 +331,6 @@ else
 	function ENT:ImpactTrace( trace , dmgtype , customimpactname )
 		--check if the trace hit the metal or the plastic part
 		return true
-	end
-
-
-	function ENT:DrawResizeGizmo()
-
 	end
 
 end
