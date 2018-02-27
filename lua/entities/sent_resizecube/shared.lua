@@ -346,4 +346,58 @@ else
 		return true
 	end
 
+	-- face: depth, x, y, direction
+	local faces = {
+	   { "GetScaleY", "GetScaleX", "GetScaleZ", "GetRight", "GetUp", 90, 1 },
+	   { "GetScaleX", "GetScaleY", "GetScaleZ", "GetForward", "GetUp", 0, 1 },
+	   { "GetScaleZ", "GetScaleY", "GetScaleX", "GetUp", "GetRight", -90, 1 },
+	   { "GetScaleY", "GetScaleX", "GetScaleZ", "GetRight", "GetUp", 90, -1 },
+	   { "GetScaleX", "GetScaleY", "GetScaleZ", "GetForward", "GetUp", 0, -1 },
+	   { "GetScaleZ", "GetScaleY", "GetScaleX", "GetUp", "GetRight", -90, -1 },
+	}
+
+	function ENT:Draw()
+		self:DrawModel()
+
+		render.SetMaterial( Material( "editor/wireframe" ) )
+
+		for k, v in ipairs( faces ) do
+			local D = self[v[1]]( self ) * self:GetScaleMultiplierValue() / 2
+			local X = self[v[2]]( self ) * self:GetScaleMultiplierValue()
+			local Y = self[v[3]]( self ) * self:GetScaleMultiplierValue()
+			local d = self[v[4]]( self ) * v[7]
+
+			-- TODO: a results in localHit having spooky inverted values. need to fix its value for each entry
+			local a = self:GetAngles()
+			a:RotateAroundAxis( self[v[5]]( self ), v[6] )
+
+			if d:Dot( LocalPlayer():GetAimVector() ) > 0 then
+				continue
+			end
+
+			local planeCenter = self:GetPos() + d * D
+
+			local hit = util.IntersectRayWithPlane( LocalPlayer():GetShootPos(), LocalPlayer():GetAimVector(), planeCenter, d )
+
+			if not hit then
+				continue
+			end
+
+			local localHit = WorldToLocal( hit, self:GetAngles(), planeCenter, a )
+
+			print( localHit )
+
+			if localHit.y > X / 2 or localHit.y < -X / 2 then
+				continue
+			end
+
+			if localHit.z > Y / 2 or localHit.z < -Y / 2 then
+				continue
+			end
+
+			debugoverlay.Cross( hit, 4, 0.04, Color( 255, 0, 0 ) )
+			break
+		end
+	end
+
 end
