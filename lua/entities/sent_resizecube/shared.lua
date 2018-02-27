@@ -98,8 +98,10 @@ function ENT:SetupDataTables()
 			}
 	} )
 
-	self:NetworkVar( "Entity" , 0 , "Widget" )
-	
+	self:NetworkVar( "Entity" , 0 , "EditingPlayer" )
+	self:NetworkVar( "Bool", 0 , "IsEditing" )
+	self:NetworkVar( "Vector", 0 , "OffsetDirection" ) --move the entity to half of a unit in this direction
+
 	local datatab = {}
 
 	for i , v in pairs( self.ScaleMultipliers ) do
@@ -186,7 +188,6 @@ function ENT:OnCubeSizeChanged( varname , oldvalue , newvalue )
 end
 
 function ENT:UpdateSize()
-	
 	if SERVER then
 		local savedproperties = nil
 		
@@ -213,7 +214,19 @@ function ENT:UpdateSize()
 			newphys:SetMaterial( "metal" )
 			
 			if savedproperties then
-				newphys:SetPos( savedproperties.pos )
+				local offset = vector_origin
+				
+				if not self:GetOffsetDirection():IsZero() then
+					offset = self:GetOffsetDirection() * self:GetScaleMultiplierValue() * 0.5
+				end
+
+				newphys:SetPos( savedproperties.pos + offset )
+				
+				--now reset it to 0
+				if not self:GetOffsetDirection():IsZero() then
+					self:SetOffsetDirection( vector_origin )
+				end
+
 				newphys:SetVelocity( savedproperties.velocity )
 				newphys:SetAngles( savedproperties.ang )
 				newphys:EnableMotion( savedproperties.motion )

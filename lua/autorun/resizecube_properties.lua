@@ -15,7 +15,8 @@ properties.Add( "resizecube_startresize" ,
 				return false
 			end
 
-			return ents.FindByClassAndParent( "widget_resizecube" , ent ) == nil
+			--find out if we have resize set to true and the player is this one
+			return not ent:GetIsEditing()
 		end,
 
 		Action = function( self , ent )
@@ -30,11 +31,9 @@ properties.Add( "resizecube_startresize" ,
 				return
 			end
 
-			local widget = ents.Create( "widget_resizecube" )
-			widget:Setup( ent , 0 )
-			widget:Spawn()
-			
-			ent:SetWidget( widget )
+			ent:SetIsEditing( true )
+			ent:SetEditingPlayer( ply )
+			--setresize true and setresize player to this one
 
 		end
 	}
@@ -51,7 +50,7 @@ properties.Add( "resizecube_endresize" ,
 				return false
 			end
 
-			return IsValid( ent:GetWidget() ) and ent:GetWidget():GetClass() == "widget_resizecube"
+			return ent:GetIsEditing()
 		end,
 
 		Action = function( self , ent )
@@ -62,12 +61,11 @@ properties.Add( "resizecube_endresize" ,
 		
 		Receive = function( self , len , ply )
 			local ent = net.ReadEntity()
-			if not IsValid( ent ) or not self:Filter( ent , ply ) or not IsValid( ent:GetWidget() ) then
+			if not IsValid( ent ) or not self:Filter( ent , ply ) then
 				return
 			end
-			
-			ent:GetWidget():Remove()
-			ent:SetWidget( NULL )
+
+			--set resize to false and current resizing player to NULL
 		end
 	}
 )
