@@ -294,7 +294,8 @@ function ENT:Think()
 
 	if CLIENT then
 		self:CheckUpdateSize()
-
+	else
+		self:DoResize()
 	end
 
 	self:NextThink( CurTime() )

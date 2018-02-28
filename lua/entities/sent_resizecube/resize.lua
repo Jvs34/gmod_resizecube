@@ -1,9 +1,4 @@
-if SERVER then
-	return
-end
-
-local Entity = FindMetaTable "Entity"
-
+-- very insecure
 local FACE_FRONT  = 1
 local FACE_BACK   = 2
 local FACE_RIGHT  = 3
@@ -161,90 +156,132 @@ local faces = {
 }
 ]]
 
-hook.Add( "Think", "sent_resizecube", function()
-	CurrentCube = nil
-	CurrentFace = nil
-	CurrentEdge = nil
+if CLIENT then
 
-	local cube = LocalPlayer():GetEyeTrace().Entity
+	hook.Add( "Think", "sent_resizecube", function()
+		if LocalPlayer():KeyDown( IN_ATTACK2 ) then
+			if not CurrentCube then return end
 
-	if not IsValid( cube ) or cube:GetClass() ~= "sent_resizecube" then
-		return
-	end
-
-	for k, v in ipairs( Faces ) do
-		local D = v.DFunc( cube ) * cube:GetScaleMultiplierValue()
-		local X = v.XFunc( cube ) * cube:GetScaleMultiplierValue()
-		local Y = v.YFunc( cube ) * cube:GetScaleMultiplierValue()
-		local d = v.ForwardFunc( cube )
-
-		if d:Dot( LocalPlayer():GetAimVector() ) > 0 then
-			continue
+			net.Start( "sent_resizecube", true )
+				net.WriteEntity( CurrentCube )
+				net.WriteUInt( CurrentFace, 3 )
+				net.WriteUInt( CurrentEdge, 3 )
+			net.SendToServer()
+			return
 		end
 
-		local planeCenter = cube:GetPos() + d * D
+		CurrentCube = nil
+		CurrentFace = nil
+		CurrentEdge = nil
 
-		debugoverlay.Cross( planeCenter, 4, 0.1, Color( 255, 0, 0 ) )
+		local cube = LocalPlayer():GetEyeTrace().Entity
 
-		local hit = util.IntersectRayWithPlane( LocalPlayer():GetShootPos(), LocalPlayer():GetAimVector(), planeCenter, d )
-
-		if not hit then
-			continue
+		if not IsValid( cube ) or cube:GetClass() ~= "sent_resizecube" then
+			return
 		end
 
-		-- This can be done without dumbAngle or WorldToLocal
-		-- It's just checking if we're aiming near an edge of the face
-		do
-			local dumbAngle = cube:GetAngles()
-			v.RotateTo2D( cube, dumbAngle )
+		for k, v in ipairs( Faces ) do
+			local D = v.DFunc( cube ) * cube:GetScaleMultiplierValue()
+			local X = v.XFunc( cube ) * cube:GetScaleMultiplierValue()
+			local Y = v.YFunc( cube ) * cube:GetScaleMultiplierValue()
+			local d = v.ForwardFunc( cube )
 
-			local localHit = WorldToLocal( hit, angle_zero, planeCenter, dumbAngle )
-
-			local xInset = X / 2 - math.abs( localHit.x )
-			local yInset = Y / 2 - math.abs( localHit.y )
-
-			if xInset < 0 or yInset < 0 then
+			if d:Dot( LocalPlayer():GetAimVector() ) > 0 then
 				continue
 			end
 
-			local xGood = xInset > 4 and yInset < 5
-			local yGood = yInset > 4 and xInset < 5
+			local planeCenter = cube:GetPos() + d * D
 
-			if not ( xGood and not yGood ) and not ( yGood and not xGood ) then
+			debugoverlay.Cross( planeCenter, 4, 0.1, Color( 255, 0, 0 ) )
+
+			local hit = util.IntersectRayWithPlane( LocalPlayer():GetShootPos(), LocalPlayer():GetAimVector(), planeCenter, d )
+
+			if not hit then
 				continue
 			end
+
+			-- This can be done without dumbAngle or WorldToLocal
+			-- It's just checking if we're aiming near an edge of the face
+			do
+				local dumbAngle = cube:GetAngles()
+				v.RotateTo2D( cube, dumbAngle )
+
+				local localHit = WorldToLocal( hit, angle_zero, planeCenter, dumbAngle )
+
+				local xInset = X / 2 - math.abs( localHit.x )
+				local yInset = Y / 2 - math.abs( localHit.y )
+
+				if xInset < 0 or yInset < 0 then
+					continue
+				end
+
+				local xGood = xInset > 4 and yInset < 5
+				local yGood = yInset > 4 and xInset < 5
+
+				if not ( xGood and not yGood ) and not ( yGood and not xGood ) then
+					-- We know we're at least on the face, so we can skip testing other faces
+					break
+				end
+			end
+
+			CurrentCube = cube
+			CurrentFace = k
+
+			local up = v.UpFunc( cube )
+			local right = v.RightFunc( cube )
+
+			local hitToPlane = hit - planeCenter
+			hitToPlane:Normalize()
+
+			local upRot = math.acos( up:Dot( hitToPlane ) )
+			local rightRot = math.acos( right:Dot( hitToPlane ) )
+			local deg45 = math.pi / 4
+			local deg135 = 3 * math.pi / 4
+
+			if upRot <= deg45 then
+				CurrentEdge = Faces[CurrentFace].FaceUp
+			elseif upRot >= deg135 then
+				CurrentEdge = Faces[CurrentFace].FaceDown
+			elseif rightRot <= deg45 then
+				CurrentEdge = Faces[CurrentFace].FaceRight
+			elseif rightRot >= deg135 then
+				CurrentEdge = Faces[CurrentFace].FaceLeft
+			end
+
+--			assert( CurrentEdge ~= nil )
+
+			render.DrawLine( hit, hit + d * 4, Color( 0, 255, 0 ) )
+			break
+		end
+	end )
+
+else
+
+	util.AddNetworkString( "sent_resizecube" )
+
+	net.Receive( "sent_resizecube", function( _, ply )
+		local cube = net.ReadEntity()
+
+		if not IsValid( cube ) then
+			ply.CurrentCube = nil
+			return
 		end
 
-		local up = v.UpFunc( cube )
-		local right = v.RightFunc( cube )
-
-		local dot = cube:GetUp():Dot( ( hit - planeCenter ):GetNormal() )
-		local ang = math.deg( math.acos( dot ) )
-
-		CurrentCube = cube
-		CurrentFace = k
-
-		if math.deg( math.acos( up:Dot( ( hit - planeCenter ):GetNormal() ) ) ) <= 45 then
-			CurrentEdge = Faces[CurrentFace].FaceUp
-			print "up"
+		if cube:GetClass() ~= "sent_resizecube" then
+			return
 		end
 
-		if math.deg( math.acos( (-up):Dot( ( hit - planeCenter ):GetNormal() ) ) ) <= 45 then
-			CurrentEdge = Faces[CurrentFace].FaceDown
-			print "down"
-		end
+		local face = net.ReadUInt( 3 )
+		local edge = net.ReadUInt( 3 )
 
-		if math.deg( math.acos( right:Dot( ( hit - planeCenter ):GetNormal() ) ) ) <= 45 then
-			CurrentEdge = Faces[CurrentFace].FaceRight
-			print "right"
-		end
+		ply.CurrentCube = cube
+		cube.CurrentPlayer = ply
+		cube.CurrentFace = face
+		cube.CurrentEdge = edge
+	end )
 
-		if math.deg( math.acos( (-right):Dot( ( hit - planeCenter ):GetNormal() ) ) ) <= 45 then
-			CurrentEdge = Faces[CurrentFace].FaceLeft
-			print "left"
-		end
+	function ENT:DoResize()
 
-		render.DrawLine( hit, hit + d * 4, Color( 0, 255, 0 ) )
-		break
 	end
-end )
+
+end
