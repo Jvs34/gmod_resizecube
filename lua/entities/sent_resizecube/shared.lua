@@ -190,6 +190,8 @@ function ENT:OnCubeSizeChanged( varname , oldvalue , newvalue )
 end
 
 function ENT:UpdateSize()
+	print( self:GetScaledMin(), self:GetScaledMax() )
+
 	if SERVER then
 		local savedproperties = nil
 		
@@ -299,6 +301,7 @@ function ENT:Think()
 	end
 
 	self:NextThink( CurTime() )
+	return true
 end
 
 function ENT:OnRemove()
